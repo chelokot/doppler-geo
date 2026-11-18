@@ -1,2 +1,13 @@
 /target/
 __pycache__/
+/.venv/
+/archive/
+/dvr/
+/dem/
+/ext/
+/eval/
+/research/cache/
+/research/clock/
+/research/enf/
+/research/survey_*/
+/research/tracks_live/
