@@ -79,10 +79,7 @@ impl LogBins {
                 (j, (u - log_bin[j]) / (log_bin[j + 1] - log_bin[j]))
             })
             .collect();
-        let edges: Vec<usize> = (0..=centers.len())
-            .map(|b| (centers[0] + (b as f64 - 0.5) * LOG_STEP).exp())
-            .map(|edge| ((edge / frequency(1)).ceil() as usize - 1).min(segment / 2))
-            .collect();
+        let edges: Vec<usize> = (0..=centers.len()).map(|b| (centers[0] + (b as f64 - 0.5) * LOG_STEP).exp()).map(|edge| ((edge / frequency(1)).ceil() as usize - 1).min(segment / 2)).collect();
         let first_pooled = edges.windows(2).position(|e| e[1] - e[0] >= 2).expect("fft finer than the log grid at high frequencies");
         LogBins { interp, edges, first_pooled }
     }
@@ -103,9 +100,7 @@ impl LogBins {
 }
 
 fn log_power_frames(samples: &[f32], hop: usize, segment: usize, bins: &LogBins) -> Vec<Vec<f64>> {
-    let window: Vec<f32> = (0..segment)
-        .map(|n| (0.5 - 0.5 * (2.0 * std::f64::consts::PI * n as f64 / segment as f64).cos()) as f32)
-        .collect();
+    let window: Vec<f32> = (0..segment).map(|n| (0.5 - 0.5 * (2.0 * std::f64::consts::PI * n as f64 / segment as f64).cos()) as f32).collect();
     let window_sum: f32 = window.iter().sum();
     let fft = RealFftPlanner::<f32>::new().plan_fft_forward(segment);
     let frames = (samples.len() - segment) / hop + 1;
@@ -173,7 +168,8 @@ pub fn compute(audio: &Path, segment_s: f64) -> Spectrogram {
         let lines = running_median(row, LINE_MEDIAN_HALF);
         row.iter_mut().zip(lines).for_each(|(v, m)| *v = (*v - m).exp().min(POWER_RATIO_CLIP) - 1.0);
     });
-    let scales: Vec<f64> = (0..bins).into_par_iter().map(|b| 1.4826 * median(&mut by_frame.iter().map(|row| row[b].abs()).collect::<Vec<_>>())).map(|scale: f64| scale.max(f64::MIN_POSITIVE)).collect();
+    let scales: Vec<f64> =
+        (0..bins).into_par_iter().map(|b| 1.4826 * median(&mut by_frame.iter().map(|row| row[b].abs()).collect::<Vec<_>>())).map(|scale: f64| scale.max(f64::MIN_POSITIVE)).collect();
     let data = by_frame.iter().flat_map(|row| row.iter().zip(&scales).map(|(v, scale)| (v / scale).clamp(-3.0, 6.0) as f32)).collect();
     Spectrogram { first_frame_time: start + (segment / 2) as f64 / rate as f64, frames, bins, data }
 }

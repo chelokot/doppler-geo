@@ -160,10 +160,5 @@ pub fn load(adsb: &Path, types: &Types) -> Vec<GeoTrack> {
             entry.1.insert(key, fix);
         }
     }
-    order
-        .iter()
-        .map(|hex| &observed[hex])
-        .filter(|(type_code, _)| types.is_propeller(type_code))
-        .flat_map(|(_, fixes)| segments(&fixes.values().copied().collect::<Vec<_>>()))
-        .collect()
+    order.iter().map(|hex| &observed[hex]).filter(|(type_code, _)| types.is_propeller(type_code)).flat_map(|(_, fixes)| segments(&fixes.values().copied().collect::<Vec<_>>())).collect()
 }

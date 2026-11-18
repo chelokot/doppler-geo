@@ -95,9 +95,7 @@ pub fn read(parts: &[PathBuf], window: (f64, f64), accept: &(dyn Fn(&str) -> boo
     let (sender, receiver) = mpsc::sync_channel::<Vec<u8>>(4096);
     std::thread::scope(|scope| {
         scope.spawn(move || {
-            let stream = parts.iter().fold(Box::new(std::io::empty()) as Box<dyn Read>, |acc, part| {
-                Box::new(acc.chain(BufReader::with_capacity(1 << 22, File::open(part).expect("archive part"))))
-            });
+            let stream = parts.iter().fold(Box::new(std::io::empty()) as Box<dyn Read>, |acc, part| Box::new(acc.chain(BufReader::with_capacity(1 << 22, File::open(part).expect("archive part")))));
             let mut archive = tar::Archive::new(stream);
             for entry in archive.entries().expect("tar entries") {
                 let mut entry = entry.expect("tar entry");

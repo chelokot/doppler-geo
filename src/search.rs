@@ -1,6 +1,6 @@
 use crate::spectrogram::{HOP_S, LOG_STEP, Spectrogram};
-use crate::tracks::STEP_S;
 use crate::stats::{robust_peak_z, round_half_even};
+use crate::tracks::STEP_S;
 use crate::tracks::Track;
 use rayon::prelude::*;
 
@@ -31,8 +31,6 @@ pub struct Geometry {
     pub ground: f64,
     pub radius: f64,
 }
-
-
 
 #[derive(Clone, Copy, clap::ValueEnum)]
 pub enum Statistic {
@@ -126,11 +124,7 @@ fn pass_score(spec: &Spectrogram, frames: &[usize], shifts: &[i64], weights: &We
 }
 
 pub fn evaluate(point: [f64; 2], track: &Track, spec: &Spectrogram, geometry: &Geometry, offsets: &[f64], ws: &mut Workspace) -> Option<Vec<f64>> {
-    let r: Vec<f64> = track
-        .pos
-        .iter()
-        .map(|p| ((p[0] - point[0]).powi(2) + (p[1] - point[1]).powi(2) + (p[2] - geometry.ground).powi(2)).sqrt())
-        .collect();
+    let r: Vec<f64> = track.pos.iter().map(|p| ((p[0] - point[0]).powi(2) + (p[1] - point[1]).powi(2) + (p[2] - geometry.ground).powi(2)).sqrt()).collect();
     let r_min = r.iter().copied().fold(f64::INFINITY, f64::min);
     let cutoff = geometry.radius.min(r_min / MIN_WEIGHT.sqrt());
     let near: Vec<usize> = (0..r.len()).filter(|&i| r[i] < cutoff).collect();
@@ -138,14 +132,8 @@ pub fn evaluate(point: [f64; 2], track: &Track, spec: &Spectrogram, geometry: &G
         return None;
     }
     let radial_speed = gradient(&r, &track.tau);
-    let shifts: Vec<i64> = near
-        .iter()
-        .map(|&i| round_half_even((SPEED_OF_SOUND / (SPEED_OF_SOUND + radial_speed[i])).ln() / LOG_STEP))
-        .collect();
-    let base_frames: Vec<i64> = near
-        .iter()
-        .map(|&i| round_half_even((track.tau[i] + r[i] / SPEED_OF_SOUND - spec.first_frame_time) / HOP_S))
-        .collect();
+    let shifts: Vec<i64> = near.iter().map(|&i| round_half_even((SPEED_OF_SOUND / (SPEED_OF_SOUND + radial_speed[i])).ln() / LOG_STEP)).collect();
+    let base_frames: Vec<i64> = near.iter().map(|&i| round_half_even((track.tau[i] + r[i] / SPEED_OF_SOUND - spec.first_frame_time) / HOP_S)).collect();
     let lag = (OFFSETS_S[OFFSETS_S.len() - 1] / HOP_S) as i64;
     if base_frames.iter().min().unwrap() - lag < 0 || base_frames.iter().max().unwrap() + lag >= spec.frames as i64 {
         return None;

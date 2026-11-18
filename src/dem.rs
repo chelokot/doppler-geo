@@ -12,7 +12,7 @@ pub struct Dem {
     tiles: HashMap<(u32, u32), Vec<f32>>,
 }
 
-fn mercator(zoom: i32, lat: f64, lon: f64) -> (f64, f64) {
+pub fn mercator(zoom: i32, lat: f64, lon: f64) -> (f64, f64) {
     let n = 2f64.powi(zoom);
     ((lon + 180.0) / 360.0 * n, (1.0 - lat.to_radians().tan().asinh() / PI) / 2.0 * n)
 }
@@ -35,10 +35,7 @@ fn decode(png_bytes: &[u8]) -> Vec<f32> {
     let mut pixels = vec![0; reader.output_buffer_size().expect("terrain size")];
     let info = reader.next_frame(&mut pixels).expect("terrain frame");
     let channels = info.color_type.samples();
-    pixels[..info.buffer_size()]
-        .chunks_exact(channels)
-        .map(|p| p[0] as f32 * 256.0 + p[1] as f32 + p[2] as f32 / 256.0 - 32768.0)
-        .collect()
+    pixels[..info.buffer_size()].chunks_exact(channels).map(|p| p[0] as f32 * 256.0 + p[1] as f32 + p[2] as f32 / 256.0 - 32768.0).collect()
 }
 
 impl Dem {

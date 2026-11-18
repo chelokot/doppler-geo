@@ -20,9 +20,9 @@ struct Args {
     adsb: Vec<PathBuf>,
     #[arg(long, default_value_t = 0.0, allow_negative_numbers = true)]
     archive_shift_days: f64,
-    #[arg(long, default_value = "../ext/types.js")]
+    #[arg(long)]
     types: PathBuf,
-    #[arg(long, default_value = "../dem")]
+    #[arg(long, default_value = "dem")]
     dem: PathBuf,
     #[arg(long, default_value_t = 2.048)]
     segment_s: f64,
@@ -131,13 +131,11 @@ fn main() {
         }
     }
     let coarse_grids = grids(picked.iter().map(|&(i, _, _)| screen_points[i]), args.half, args.step);
-    let fine_terrain = dem::Dem::fetch(&args.dem, VERIFY_ZOOM, coarse_grids.iter().flat_map(|g| g.corners()));
+    let refine_reach = grids(picked.iter().map(|&(i, _, _)| screen_points[i]), args.half + args.step, args.step);
+    let fine_terrain = dem::Dem::fetch(&args.dem, VERIFY_ZOOM, refine_reach.iter().flat_map(|g| g.corners()));
     let best_in = |grid_list: &[world::Grid], offsets: &[f64]| -> Vec<Best> {
-        let probes: Vec<world::Probe> = grid_list
-            .iter()
-            .zip(offsets)
-            .flat_map(|(g, &offset)| (0..g.side * g.side).map(move |c| world::Probe::around(g.latlon(c), offset, REFINE_OFFSET_REACH_S)))
-            .collect();
+        let probes: Vec<world::Probe> =
+            grid_list.iter().zip(offsets).flat_map(|(g, &offset)| (0..g.side * g.side).map(move |c| world::Probe::around(g.latlon(c), offset, REFINE_OFFSET_REACH_S))).collect();
         let passes = exact(&probes, &fine_terrain);
         let per_grid = probes.len() / grid_list.len();
         probes

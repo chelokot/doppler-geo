@@ -125,10 +125,12 @@ pub fn runs(tracks: &[GeoTrack], radius: f64) -> Vec<Run> {
 
 pub fn score_grid<'a>(grid: &Grid, spans: impl Iterator<Item = &'a Span>, tracks: &[GeoTrack], bank: &TemplateBank, dem: &Dem, radius: f64) -> Vec<Cell> {
     let cells = grid.side * grid.side;
-    let ground: Vec<f64> = (0..cells).map(|c| {
-        let (lat, lon) = grid.latlon(c);
-        dem.ground(lat, lon)
-    }).collect();
+    let ground: Vec<f64> = (0..cells)
+        .map(|c| {
+            let (lat, lon) = grid.latlon(c);
+            dem.ground(lat, lon)
+        })
+        .collect();
     let mut total = vec![[0f32; OFFSETS_S.len()]; cells];
     let mut passes = vec![0u32; cells];
     let mut nearest = vec![(f64::INFINITY, 0usize); cells];
@@ -201,10 +203,7 @@ pub fn scan(runs: &[Run], tracks: &[GeoTrack], bank: &TemplateBank, dem: &Dem, r
 pub fn tile_corners(runs: &[Run]) -> Vec<(f64, f64)> {
     let mut tiles: Vec<TileKey> = runs.iter().map(|r| r.tile).collect();
     tiles.dedup();
-    tiles
-        .iter()
-        .flat_map(|tile| tile.grid().corners())
-        .collect()
+    tiles.iter().flat_map(|tile| tile.grid().corners()).collect()
 }
 
 pub fn distance_m(a: (f64, f64), b: (f64, f64)) -> f64 {
@@ -263,25 +262,28 @@ impl Probe {
 pub fn exact(probes: &[Probe], tile_runs: &HashMap<TileKey, &[Run]>, tracks: &[GeoTrack], spec: &Spectrogram, dem: &Dem, radius: f64, statistic: Statistic) -> Vec<Vec<Vec<f64>>> {
     probes
         .par_iter()
-        .map_init(|| Workspace::new(statistic), |ws, probe| {
-            let (lat, lon) = probe.point;
-            let frame = Frame::new(lat, lon);
-            let geometry = Geometry { ground: dem.ground(lat, lon), radius };
-            let runs = tile_runs.get(&TileKey::of(lat, lon)).copied().unwrap_or_default();
-            runs.iter()
-                .filter_map(|run| {
-                    let geo = &tracks[run.span.track];
-                    let span = run.span.start..run.span.end;
-                    let pos = geo.pos[span.clone()]
-                        .iter()
-                        .map(|&[plat, plon, alt]| {
-                            let (x, y) = frame.to_xy(plat, plon);
-                            [x, y, alt]
-                        })
-                        .collect();
-                    evaluate([0.0, 0.0], &Track { tau: geo.tau[span].to_vec(), pos }, spec, &geometry, &probe.offsets, ws)
-                })
-                .collect()
-        })
+        .map_init(
+            || Workspace::new(statistic),
+            |ws, probe| {
+                let (lat, lon) = probe.point;
+                let frame = Frame::new(lat, lon);
+                let geometry = Geometry { ground: dem.ground(lat, lon), radius };
+                let runs = tile_runs.get(&TileKey::of(lat, lon)).copied().unwrap_or_default();
+                runs.iter()
+                    .filter_map(|run| {
+                        let geo = &tracks[run.span.track];
+                        let span = run.span.start..run.span.end;
+                        let pos = geo.pos[span.clone()]
+                            .iter()
+                            .map(|&[plat, plon, alt]| {
+                                let (x, y) = frame.to_xy(plat, plon);
+                                [x, y, alt]
+                            })
+                            .collect();
+                        evaluate([0.0, 0.0], &Track { tau: geo.tau[span].to_vec(), pos }, spec, &geometry, &probe.offsets, ws)
+                    })
+                    .collect()
+            },
+        )
         .collect()
 }

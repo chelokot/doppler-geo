@@ -2,6 +2,9 @@
 name = "doppler-locate"
 version = "0.1.0"
 edition = "2024"
+description = "Locate an audio recording anywhere on Earth from the Doppler shifts of propeller aircraft and global ADS-B tracks"
+license = "MIT"
+repository = "https://github.com/chelokot/doppler-geo"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
@@ -14,6 +17,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 tar = "0.4.46"
 ureq = "3.5.1"
+
+[profile.dev]
+opt-level = 3
 
 [profile.release]
 lto = "fat"

@@ -48,10 +48,14 @@ fn main() {
         let traces: Vec<Trace> = aircraft
             .iter()
             .filter_map(|a| {
-                let near: Vec<_> = a.fixes.iter().filter(|f| {
-                    let (x, y) = frame.to_xy(f.lat, f.lon);
-                    x.hypot(y) < args.radius
-                }).collect();
+                let near: Vec<_> = a
+                    .fixes
+                    .iter()
+                    .filter(|f| {
+                        let (x, y) = frame.to_xy(f.lat, f.lon);
+                        x.hypot(y) < args.radius
+                    })
+                    .collect();
                 (near.len() >= 3).then(|| Trace {
                     hex: a.hex.clone(),
                     r#type: a.type_code.clone(),
