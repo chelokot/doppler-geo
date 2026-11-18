@@ -20,7 +20,7 @@ const HARMONICS: [f64; 4] = [1.0, 0.7, 0.5, 0.35];
 const NOISE: f64 = 0.05;
 const PCM_SCALE: f64 = 8000.0;
 const EMISSION_STEP_S: f64 = 0.05;
-const TERRAIN_MARGIN_DEG: f64 = 0.5;
+const TERRAIN_MARGIN_DEG: f64 = 0.6;
 const SEA_LEVEL_TERRARIUM: [u8; 3] = [128, 0, 0];
 const SILENT_AIRCRAFT: usize = 200;
 const SILENT_DISTANCE_M: (f64, f64) = (10_000.0, 150_000.0);
@@ -78,6 +78,14 @@ impl Pass {
     }
 }
 
+#[derive(Clone, Copy)]
+struct Bounds {
+    south: f64,
+    north: f64,
+    west: f64,
+    east: f64,
+}
+
 #[derive(Deserialize)]
 struct Located {
     lat: f64,
@@ -133,8 +141,9 @@ fn write_audio(path: &Path) {
     std::fs::write(path.with_extension("wav.start"), RECORDING_START.to_string()).unwrap();
 }
 
-fn write_adsb(path: &Path) {
+fn write_adsb(path: &Path) -> Bounds {
     let frame = Frame::new(SITE.0, SITE.1);
+    let mut bounds = Bounds { south: SITE.0, north: SITE.0, west: SITE.1, east: SITE.1 };
     let traffic: Vec<Pass> = audible().into_iter().map(|(pass, _)| pass).chain(silent()).collect();
     let mut out = BufWriter::new(File::create(path).unwrap());
     for second in FLIGHT_S.0 as i64..=FLIGHT_S.1 as i64 {
@@ -144,11 +153,13 @@ fn write_adsb(path: &Path) {
             .map(|pass| {
                 let [x, y, altitude] = pass.position(now);
                 let (lat, lon) = frame.to_latlon(x, y);
+                bounds = Bounds { south: bounds.south.min(lat), north: bounds.north.max(lat), west: bounds.west.min(lon), east: bounds.east.max(lon) };
                 serde_json::json!({"hex": pass.hex, "t": "C172", "lat": lat, "lon": lon, "seen_pos": 0.0, "alt_baro": altitude / FEET, "alt_geom": altitude / FEET})
             })
             .collect();
         writeln!(out, "{}", serde_json::json!({"now": now, "ac": aircraft})).unwrap();
     }
+    bounds
 }
 
 fn write_types(path: &Path) {
@@ -157,14 +168,14 @@ fn write_types(path: &Path) {
     gz.finish().unwrap();
 }
 
-fn write_flat_terrain(cache: &Path) {
+fn write_flat_terrain(cache: &Path, traffic: Bounds) {
     let mut png_bytes = Vec::new();
     let mut encoder = png::Encoder::new(&mut png_bytes, 256, 256);
     encoder.set_color(png::ColorType::Rgb);
     encoder.write_header().unwrap().write_image_data(&SEA_LEVEL_TERRARIUM.repeat(256 * 256)).unwrap();
     for zoom in [6, 11] {
-        let (x0, y0) = mercator(zoom, SITE.0 + TERRAIN_MARGIN_DEG, SITE.1 - TERRAIN_MARGIN_DEG);
-        let (x1, y1) = mercator(zoom, SITE.0 - TERRAIN_MARGIN_DEG, SITE.1 + TERRAIN_MARGIN_DEG);
+        let (x0, y0) = mercator(zoom, traffic.north + TERRAIN_MARGIN_DEG, traffic.west - TERRAIN_MARGIN_DEG);
+        let (x1, y1) = mercator(zoom, traffic.south - TERRAIN_MARGIN_DEG, traffic.east + TERRAIN_MARGIN_DEG);
         for x in x0 as u32..=x1 as u32 {
             for y in y0 as u32..=y1 as u32 {
                 let dir = cache.join(format!("{zoom}/{x}"));
@@ -181,9 +192,9 @@ fn locates_a_recording_from_four_propeller_passes_within_100_m() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     write_audio(&dir.join("recording.wav"));
-    write_adsb(&dir.join("adsb.jsonl"));
+    let traffic = write_adsb(&dir.join("adsb.jsonl"));
     write_types(&dir.join("types.js"));
-    write_flat_terrain(&dir.join("dem"));
+    write_flat_terrain(&dir.join("dem"), traffic);
     let status = Command::new(env!("CARGO_BIN_EXE_doppler-locate"))
         .current_dir(&dir)
         .args(["--audio", "recording.wav", "--adsb", "adsb.jsonl", "--types", "types.js", "--dem", "dem", "--out", "located.json"])

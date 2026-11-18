@@ -10,7 +10,7 @@ Light aircraft broadcast their positions over ADS-B, and their engines and prope
 
 ## Results
 
-The benchmark uses 58 public YouTube railway webcams with published locations ([`sites.json`](sites.json)). Each contributes about 9 hours of audio from 9 November 2026, searched against the [adsb.lol](https://adsb.lol) global archive for that day with no prior on location. 31 of the 58 have been evaluated so far:
+The benchmark uses 58 public YouTube railway webcams with published locations ([`sites.json`](sites.json)). Each contributes 2 to 9 hours of audio (median 9) from 9 November 2026, searched against the [adsb.lol](https://adsb.lol) global archive for that day with no prior on location. 31 of the 58 have been evaluated so far:
 
 | Error of the top answer | Cameras |
 |---|---|
