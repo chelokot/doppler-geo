@@ -1,0 +1,21 @@
+[package]
+name = "doppler-locate"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+hound = "3"
+png = "0.18.1"
+rayon = "1"
+realfft = "3"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+tar = "0.4.46"
+ureq = "3.5.1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
